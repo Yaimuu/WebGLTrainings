@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="./main.css" rel="stylesheet">
+    <title>Tuto WebGL</title>
+</head>
+<body>
+    <canvas>
+        Your Browser does not support WebGL
+    </canvas>
+
+    <script id="vertex-shader-2d" type="x-shader/x-vertex">
+        attribute vec2 a_position;
+         
+        void main() {
+          gl_Position = vec4(a_position, 0, 1);
+        }
+    </script>
+         
+    <script id="fragment-shader-2d" type="x-shader/x-fragment">
+        void main() {
+            gl_FragColor = vec4(0, 1, 0, 1);  // green
+        }
+    </script>
+
+    <script src="main.js"></script>
+</body>
+</html>
