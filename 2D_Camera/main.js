@@ -18,9 +18,7 @@ function main()
 
   // lookup uniforms
   var resolutionLocation = gl.getUniformLocation(program, "u_resolution");
-  var colorLocation = gl.getUniformLocation(program, "u_color");
-  // var translationLocation = gl.getUniformLocation(program, "u_translation");
-  // var rotationLocation = gl.getUniformLocation(program, "u_rotation");
+  var colorLocation = gl.getUniformLocation(program, "u_color");;
   var transformLocation = gl.getUniformLocation(program, "u_transform");
 
   // Create a buffer to put positions in

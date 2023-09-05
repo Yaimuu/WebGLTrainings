@@ -4,47 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="./main.css">
-    <title>Tuto 2D Translation WebGL</title>
+    <title>2D Camera WebGL</title>
 </head>
 <body>
     <canvas>
         Your Browser does not support WebGL
     </canvas>
-
-    <script id="vertex-shader-2d-no-matrix" type="x-shader/x-vertex">
-        attribute vec2 a_position;
-
-        uniform vec2 u_resolution;
-        uniform vec2 u_translation;
-        uniform vec2 u_rotation;
-        uniform mat3 u_transform;
-
-        void main() {
-            // https://academo.org/demos/rotation-about-point/
-            // Translate vertices to the point we want to rotate arround
-            vec2 translate = a_position - u_translation;
-
-            // Rotate vertices
-            vec2 rotation = vec2(
-                translate.x * u_rotation.x + translate.y * u_rotation.y,
-                translate.y * u_rotation.x - translate.x * u_rotation.y
-            );
-
-            // Add in the translation.
-            vec2 position = rotation + u_translation;
-
-            // convert the rectangle points from pixels to 0.0 to 1.0
-            vec2 zeroToOne = position / u_resolution;
-
-            // convert from 0->1 to 0->2
-            vec2 zeroToTwo = zeroToOne * 2.0;
-
-            // convert from 0->2 to -1->+1 (clipspace)
-            vec2 clipSpace = zeroToTwo - 1.0;
-
-            gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
-        }
-    </script>
 
     <script id="vertex-shader-2d" type="x-shader/x-vertex">
         attribute vec2 a_position;
