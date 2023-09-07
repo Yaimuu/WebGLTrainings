@@ -11,27 +11,35 @@
         Your Browser does not support WebGL
     </canvas>
 
+    <script id="vertex-shader-2d-grid" type="x-shader/x-vertex">
+        attribute vec2 a_position;
+
+        uniform mat3 u_gridtransform;
+
+        void main() {
+            // Add in the translation.
+            gl_Position = vec4((u_gridtransform * vec3(a_position, 1)).xy, 0, 1);
+        }
+    </script>
+
+    <script id="fragment-shader-2d-grid" type="x-shader/x-fragment">
+        precision mediump float;
+
+        uniform vec4 u_color;
+
+        void main() {
+            gl_FragColor = u_color;
+        }
+    </script>
+
     <script id="vertex-shader-2d" type="x-shader/x-vertex">
         attribute vec2 a_position;
 
-        uniform vec2 u_resolution;
         uniform mat3 u_transform;
 
         void main() {
-
             // Add in the translation.
-            vec2 position = (u_transform * vec3(a_position, 1)).xy;
-
-            // convert the rectangle points from pixels to 0.0 to 1.0
-            vec2 zeroToOne = position / u_resolution;
-
-            // convert from 0->1 to 0->2
-            vec2 zeroToTwo = zeroToOne * 2.0;
-
-            // convert from 0->2 to -1->+1 (clipspace)
-            vec2 clipSpace = zeroToTwo - 1.0;
-
-            gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+            gl_Position = vec4((u_transform * vec3(a_position, 1)).xy, 0, 1);
         }
     </script>
          
@@ -58,6 +66,7 @@
 
     <script src="../matrixHelper.js"></script>
 
+    <script src="background.js"></script>
     <script src="main.js"></script>
 </body>
 </html>
