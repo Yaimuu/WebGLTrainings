@@ -75,11 +75,13 @@ function main()
     return function(event) {
       // event.preventDefault();
 
-      zoom += (event.deltaY * 0.001);
-
-      zoom = Math.min(Math.max(1, zoom), 100);
-      // console.log(zoom);
-      // angle = (angle + event.deltaY * -0.1) % 360;
+      const amount = event.deltaY;
+      if (event.deltaY < 0) {
+        zoom *= 1 - clamp(event.deltaY / -500, 0, 1);
+      } else {
+        zoom *= 1 + clamp(event.deltaY / 500, 0, 1);
+      }
+      zoom = clamp(zoom, 0.0001, 10000);
 
       drawScene();
     }
@@ -101,7 +103,7 @@ function main()
     gl.clearColor(0.2, 0.2, 0.2, 1);
     // gl.clear(gl.COLOR_BUFFER_BIT);
 
-    background(gl, zoom);
+    background(gl, zoom, {x: gl.canvas.width/2 - translation.x, y: gl.canvas.height/2 - translation.y});
 
     // Tell it to use our program (pair of shaders)
     gl.useProgram(program);
@@ -127,11 +129,12 @@ function main()
   
     // Multiply the matrices.
     var matrix = m3.projection(gl.canvas.clientWidth, gl.canvas.clientHeight);
-    matrix = m3.translate(matrix, translation.x, translation.y);
+    matrix = m3.translate(matrix, gl.canvas.clientWidth/2, gl.canvas.clientHeight/2);
+    // matrix = m3.translate(matrix, translation.x, translation.y);
     matrix = m3.translate(matrix, recSize.width/2, recSize.height/2);
     matrix = m3.rotate(matrix, (angle) * (Math.PI/180));
     matrix = m3.translate(matrix, -recSize.width/2, -recSize.height/2);
-    matrix = m3.scale(matrix, 1/zoom, 1/zoom);
+    matrix = m3.scale(matrix, zoom, zoom);
 
     gl.uniformMatrix3fv(transformLocation, false, matrix);
 
@@ -165,6 +168,10 @@ function drawRectangle(gl, pos, width, height)
   var offset = 0;
   gl.drawArrays(primitiveType, offset, 6);
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
+}
+
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
 }
 
 main();
