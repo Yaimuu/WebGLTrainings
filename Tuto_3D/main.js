@@ -19,68 +19,81 @@ function main()
   // lookup uniforms
   var transformLocation = gl.getUniformLocation(program, "u_transform");
   
-  var fieldOfView = 60;
-  var translation = {x: canvas.clientWidth / 2, y: canvas.clientHeight / 2, z: -500};
+  var fieldOfView = 5;
+  var translation = {x: 0, y: 0, z: 0};
   var angle = 0;
-  var speed = 10;
+  var speed = 50;
   var scale = {x: 1, y: 1, z: 1};
   var size = {width: 200, height: 200, depth: 200};
   var anchor = {x: size.width/2, y: size.height/2, z: size.depth/2};
 
-  var cameraAngle = 0;
+  var cameraAngle = {x: 0, y: 0, z: 0};
   var nbCubes = 10;
 
-  let cube = generateCube({x: 0, y: 0, z: 0}, {width: 200, height: 200, depth: 200});
-    console.log(cube);
+  let cube = generateCube({x: 0, y: 0, z: 0}, size);
+  console.log(cube);
+
+  // Create a buffer to put positions in
+  var positionBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cube.positions), gl.STATIC_DRAW);
   
-    // Create a buffer to put positions in
-    var positionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cube.positions), gl.STATIC_DRAW);
-    
-    // Create a buffer for colors.
-    var colorBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(cube.colors), gl.STATIC_DRAW);
-    
+  // Create a buffer for colors.
+  var colorBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(cube.colors), gl.STATIC_DRAW);
   
   console.log(translation);
 
-  canvas.addEventListener("keydown", updatePosition());
+  document.addEventListener("keydown", updatePosition);
   canvas.addEventListener("wheel", function(e) {
     fieldOfView = Math.min(Math.max(5, fieldOfView + e.deltaY * 0.01), 175);
   });
-  // canvas.addEventListener("mousemove", lookArround());
+  canvas.addEventListener("mousemove", lookArround);
 
-  function updatePosition() {
-    return function(event) {
+  function updatePosition(event) {
       switch(event.code)
       {
+        case "KeyW":
         case "ArrowUp":
-          translation.z -= speed;
-          break;
-        case "ArrowDown":
           translation.z += speed;
           break;
-        case "ArrowLeft":
-          translation.x -= speed;
+        case "KeyS":
+        case "ArrowDown":
+          translation.z -= speed;
           break;
-        case "ArrowRight":
+        case "KeyA":
+        case "ArrowLeft":
           translation.x += speed;
           break;
-      }
+        case "KeyD":
+        case "ArrowRight":
+          translation.x -= speed;
+          break;
     };
   }
 
   function lookArround(e) {
-    let rotY = Math.sin(e.clientX - canvas.clientWidth / 2);
-    let rotX = Math.cos(e.clientY - canvas.clientHeight / 2);
+    // 
+    let rotY = e.offsetX - (canvas.clientWidth / 2);
+    let rotX = e.offsetY - (canvas.clientHeight / 2);
 
-
+    cameraAngle.x = clamp(rotX / 3, -120, 60);
+    cameraAngle.y = -rotY / 3;
+    // console.log(cameraAngle);
   }
 
+  var then = 0;
+
   // RENDERING
-  function drawScene() {
+  function drawScene(now) {
+    // Convert to seconds
+    now *= 0.001;
+    // Subtract the previous time from the current time
+    var deltaTime = now - then;
+    // Remember the current time for the next frame.
+    then = now;
+
     webglUtils.resizeCanvasToDisplaySize(gl.canvas);
 
     // Tell WebGL how to convert from clip space to pixels
@@ -124,22 +137,26 @@ function main()
     normalize = true;         // normalize the data (convert from 0-255 to 0-1)
     gl.vertexAttribPointer(colorLocation, size, type, normalize, stride, offset);
     
-    var fieldOfViewRadians = fieldOfView * Math.PI/180
+    var fieldOfViewRadians = fieldOfView * Math.PI/180;
     var aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
     var zNear = 1;
-    var zFar = 2000;
+    var zFar = 4000;
     // Compute the matrices
     var projectionMatrix = m4.perspective(fieldOfViewRadians, aspect, zNear, zFar);
     projectionMatrix = m4.multiply(projectionMatrix, m4.projection(gl.canvas.clientWidth, gl.canvas.clientHeight, 400));
-    projectionMatrix = m4.translate(projectionMatrix, translation.x, translation.y, translation.z);
+    projectionMatrix = m4.translate(projectionMatrix, canvas.clientWidth/2, canvas.clientHeight/2, -500);
     // projectionMatrix = m4.scale(projectionMatrix, scale.x, scale.y, scale.z);
-    
+    projectionMatrix = m4.yRotate(projectionMatrix, cameraAngle.y * (Math.PI/180))
+    // projectionMatrix = m4.xRotate(projectionMatrix, cameraAngle.x * (Math.PI/180));
+    projectionMatrix = m4.translate(projectionMatrix, translation.x, translation.y, translation.z);
     var numFs = 5;
-    var radius = 500;
+    var radius = 600;
     
     // Compute a matrix for the camera
-    var cameraMatrix = m4.yRotation(cameraAngle * (Math.PI/180));
-    cameraMatrix = m4.translate(cameraMatrix, 0, 0, radius * 1.5);
+    var cameraMatrix = m4.xRotation(cameraAngle.x * (Math.PI/180));
+    // cameraMatrix = m4.xRotate(cameraMatrix, cameraAngle.x * (Math.PI/180));
+    // cameraMatrix = m4.translate(cameraMatrix, translation.x, translation.y, translation.z);
+    // cameraMatrix = m4.translate(cameraMatrix, 0, 0, radius * 1.5);
     
     // Make a view matrix from the camera matrix.
     var viewMatrix = m4.inverse(cameraMatrix);
@@ -149,7 +166,7 @@ function main()
     for (var ii = 0; ii < numFs; ++ii) {
       var positionAngle = ii * Math.PI * 2 / numFs;
       var x = Math.cos(positionAngle) * radius;
-      var y = Math.sin(positionAngle) * radius
+      var y = Math.sin(positionAngle) * radius;
      
       // starting with the view projection matrix
       // compute a matrix for the object
@@ -166,14 +183,16 @@ function main()
       // Draw the geometry.
       var primitiveType = gl.TRIANGLES;
       gl.drawArrays(primitiveType, 0, cube.positions.length/3);
+      
     }
 
-    cameraAngle++;
-    angle++;
+    // cameraAngle.y++;
+    // angle++;
     // console.log(angle);
+    window.requestAnimationFrame(drawScene);
   }
-
-  setInterval(drawScene, 50);
+  drawScene();
+  // window.requestAnimationFrame(drawScene);
 }
 
 function drawPlane(p1, p2, color) {
@@ -316,6 +335,10 @@ function generateCube(pos, size) {
   // console.log(colors);
 
   return {positions: positions, colors: colors};
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(min, value), max);
 }
 
 main();
