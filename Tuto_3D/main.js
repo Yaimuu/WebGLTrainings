@@ -19,16 +19,17 @@ function main()
   // lookup uniforms
   var transformLocation = gl.getUniformLocation(program, "u_transform");
   
-  var fieldOfView = 5;
+  var fieldOfView = 60;
   var translation = {x: 0, y: 0, z: 0};
   var angle = 0;
-  var speed = 50;
+  var speed = 25;
   var scale = {x: 1, y: 1, z: 1};
   var size = {width: 200, height: 200, depth: 200};
   var anchor = {x: size.width/2, y: size.height/2, z: size.depth/2};
 
   var cameraAngle = {x: 0, y: 0, z: 0};
-  var nbCubes = 10;
+
+  var cameraMatrix = m4.identity();
 
   let cube = generateCube({x: 0, y: 0, z: 0}, size);
   console.log(cube);
@@ -47,40 +48,51 @@ function main()
 
   document.addEventListener("keydown", updatePosition);
   canvas.addEventListener("wheel", function(e) {
-    fieldOfView = Math.min(Math.max(5, fieldOfView + e.deltaY * 0.01), 175);
+    
+    fieldOfView = clamp(fieldOfView + e.deltaY * 0.01, 5, 175);
   });
+  
   canvas.addEventListener("mousemove", lookArround);
 
   function updatePosition(event) {
-      switch(event.code)
-      {
-        case "KeyW":
-        case "ArrowUp":
-          translation.z += speed;
-          break;
-        case "KeyS":
-        case "ArrowDown":
-          translation.z -= speed;
-          break;
-        case "KeyA":
-        case "ArrowLeft":
-          translation.x += speed;
-          break;
-        case "KeyD":
-        case "ArrowRight":
-          translation.x -= speed;
-          break;
+    let forward = m4.getDir(cameraMatrix);
+    let side = dot(forward, [0,1,0]);
+    
+    switch(event.code)
+    {
+      case "KeyW":
+      case "ArrowUp":
+        translation.x += forward[0] * speed;
+        translation.y += forward[1] * speed;
+        translation.z += forward[2] * speed;
+        break;
+      case "KeyS":
+      case "ArrowDown":
+        translation.x -= forward[0] * speed;
+        translation.y -= forward[1] * speed;
+        translation.z -= forward[2] * speed;
+        break;
+      case "KeyA":
+      case "ArrowLeft":
+        translation.x -= side[0] * speed;
+        translation.y -= side[1] * speed;
+        translation.z -= side[2] * speed;
+        break;
+      case "KeyD":
+      case "ArrowRight":
+        translation.x += side[0] * speed;
+        translation.y += side[1] * speed;
+        translation.z += side[2] * speed;
+        break;
     };
   }
 
   function lookArround(e) {
-    // 
-    let rotY = e.offsetX - (canvas.clientWidth / 2);
-    let rotX = e.offsetY - (canvas.clientHeight / 2);
+    let rotY = ((e.offsetX) - (canvas.clientWidth / 2));
+    let rotX = ((e.offsetY) - (canvas.clientHeight / 2));
 
-    cameraAngle.x = clamp(rotX / 3, -120, 60);
-    cameraAngle.y = -rotY / 3;
-    // console.log(cameraAngle);
+    cameraAngle.x = ((-rotX) / 3) % 360;
+    cameraAngle.y = ((-(rotY) / 3)) % 360;
   }
 
   var then = 0;
@@ -143,20 +155,17 @@ function main()
     var zFar = 4000;
     // Compute the matrices
     var projectionMatrix = m4.perspective(fieldOfViewRadians, aspect, zNear, zFar);
-    projectionMatrix = m4.multiply(projectionMatrix, m4.projection(gl.canvas.clientWidth, gl.canvas.clientHeight, 400));
-    projectionMatrix = m4.translate(projectionMatrix, canvas.clientWidth/2, canvas.clientHeight/2, -500);
-    // projectionMatrix = m4.scale(projectionMatrix, scale.x, scale.y, scale.z);
-    projectionMatrix = m4.yRotate(projectionMatrix, cameraAngle.y * (Math.PI/180))
-    // projectionMatrix = m4.xRotate(projectionMatrix, cameraAngle.x * (Math.PI/180));
-    projectionMatrix = m4.translate(projectionMatrix, translation.x, translation.y, translation.z);
+    
     var numFs = 5;
     var radius = 600;
     
     // Compute a matrix for the camera
-    var cameraMatrix = m4.xRotation(cameraAngle.x * (Math.PI/180));
-    // cameraMatrix = m4.xRotate(cameraMatrix, cameraAngle.x * (Math.PI/180));
-    // cameraMatrix = m4.translate(cameraMatrix, translation.x, translation.y, translation.z);
-    // cameraMatrix = m4.translate(cameraMatrix, 0, 0, radius * 1.5);
+    cameraMatrix = m4.identity();
+    cameraMatrix = m4.translate(cameraMatrix, translation.x, translation.y, translation.z);
+    cameraMatrix = m4.yRotate(cameraMatrix, cameraAngle.y * (Math.PI/180));
+    cameraMatrix = m4.xRotate(cameraMatrix, cameraAngle.x * (Math.PI/180));
+    cameraMatrix = m4.translate(cameraMatrix, -translation.x, -translation.y, -translation.z);
+    cameraMatrix = m4.translate(cameraMatrix, translation.x, translation.y, translation.z);
     
     // Make a view matrix from the camera matrix.
     var viewMatrix = m4.inverse(cameraMatrix);
@@ -173,8 +182,8 @@ function main()
       var matrix = m4.translate(viewProjectionMatrix, x, 0, y);
       matrix = m4.translate(matrix, anchor.x, anchor.y, anchor.z);
       matrix = m4.xRotate(matrix, angle * (Math.PI/180));
-      // matrix = m4.yRotate(matrix, angle * (Math.PI/180));
-      // matrix = m4.zRotate(matrix, angle * (Math.PI/180));
+      matrix = m4.yRotate(matrix, angle * (Math.PI/180));
+      matrix = m4.zRotate(matrix, angle * (Math.PI/180));
       matrix = m4.translate(matrix, -anchor.x, -anchor.y, -anchor.z);
       
       // Set the matrix.
@@ -185,14 +194,11 @@ function main()
       gl.drawArrays(primitiveType, 0, cube.positions.length/3);
       
     }
-
-    // cameraAngle.y++;
-    // angle++;
-    // console.log(angle);
+    
+    angle++;
     window.requestAnimationFrame(drawScene);
   }
   drawScene();
-  // window.requestAnimationFrame(drawScene);
 }
 
 function drawPlane(p1, p2, color) {
@@ -324,21 +330,22 @@ function generateCube(pos, size) {
     [255, 0, 255]
   ));
 
-  // console.log(planes);
-
   planes.forEach(plane => {
     positions = positions.concat(plane.positions);
     colors = colors.concat(plane.colors);
   });
-  
-  // console.log(positions);
-  // console.log(colors);
 
   return {positions: positions, colors: colors};
 }
 
 function clamp(value, min, max) {
   return Math.min(Math.max(min, value), max);
+}
+
+function dot(a, b) {
+  return [a[1] * b[2] - a[2] * b[1],
+          a[2] * b[0] - a[0] * b[2],
+          a[0] * b[1] - a[1] * b[0]];
 }
 
 main();

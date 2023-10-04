@@ -283,6 +283,19 @@ var m4 = {
   scale: function(m, sx, sy, sz) {
     return m4.multiply(m, m4.scaling(sx, sy, sz));
   },
+  normalize: function(v) {
+    var length = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+    // make sure we don't divide by 0.
+    if (length > 0.00001) {
+      return [v[0] / length, v[1] / length, v[2] / length];
+    } else {
+      return [0, 0, 0];
+    }
+  },
+  getDir: function(m) {
+    let matrix = m4.inverse(m);
+    return m4.normalize([-matrix[2], -matrix[6], -matrix[10]]);
+  },
   multiply: function(a, b) {
     var b00 = b[0 * 4 + 0];
     var b01 = b[0 * 4 + 1];
