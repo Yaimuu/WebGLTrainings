@@ -56,8 +56,8 @@ function main()
 
   function updatePosition(event) {
     let forward = m4.getDir(cameraMatrix);
-    let side = dot(forward, [0,1,0]);
-    
+    let side = cross(forward, [0,1,0]);
+    console.log(event.code);
     switch(event.code)
     {
       case "KeyW":
@@ -83,6 +83,13 @@ function main()
         translation.x += side[0] * speed;
         translation.y += side[1] * speed;
         translation.z += side[2] * speed;
+        break;
+      case "KeyQ":
+        translation.y -= speed;
+        
+        break;
+      case "KeyE":
+        translation.y += speed;
         break;
     };
   }
@@ -342,7 +349,7 @@ function clamp(value, min, max) {
   return Math.min(Math.max(min, value), max);
 }
 
-function dot(a, b) {
+function cross(a, b) {
   return [a[1] * b[2] - a[2] * b[1],
           a[2] * b[0] - a[0] * b[2],
           a[0] * b[1] - a[1] * b[0]];
